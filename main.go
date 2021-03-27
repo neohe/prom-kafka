@@ -1,7 +1,7 @@
 package main
 
 import (
-    "github.com/confluentinc/confluent-kafka-go/kafka"
+    "github.com/Shopify/sarama"
     "github.com/gin-contrib/logger"
     "github.com/gin-gonic/gin"
     "github.com/prometheus/client_golang/prometheus/promhttp"
@@ -12,48 +12,22 @@ import (
 func main() {
     log.Info("creating kafka producer")
 
-    kafkaConfig := kafka.ConfigMap{
-        "bootstrap.servers":   kafkaBrokerList,
-        "compression.codec":   kafkaCompression,
-        "batch.num.messages":  kafkaBatchNumMessages,
-        "go.batch.producer":   true,  // Enable batch producer (for increased performance).
-        "go.delivery.reports": false, // per-message delivery reports to the Events() channel
+    config := sarama.NewConfig()
+    config.Producer.Return.Errors = true
+    config.Producer.Partitioner = sarama.NewRandomPartitioner
+
+    client, err := sarama.NewClient([]string{"localhost:9092", "localhost:9192", "localhost:9292"}, config)
+    if err != nil {
+        logrus.WithError(err).Fatal("couldn't not create kafka client")
     }
-
-    if kafkaSslClientCertFile != "" && kafkaSslClientKeyFile != "" && kafkaSslCACertFile != "" {
-        if kafkaSecurityProtocol == "" {
-            kafkaSecurityProtocol = "ssl"
-        }
-
-        if kafkaSecurityProtocol != "ssl" && kafkaSecurityProtocol != "sasl_ssl" {
-            logrus.Fatal("invalid config: kafka security protocol is not ssl based but ssl config is provided")
-        }
-
-        kafkaConfig["security.protocol"] = kafkaSecurityProtocol
-        kafkaConfig["ssl.ca.location"] = kafkaSslCACertFile              // CA certificate file for verifying the broker's certificate.
-        kafkaConfig["ssl.certificate.location"] = kafkaSslClientCertFile // Client's certificate
-        kafkaConfig["ssl.key.location"] = kafkaSslClientKeyFile          // Client's key
-        kafkaConfig["ssl.key.password"] = kafkaSslClientKeyPass          // Key password, if any.
-    }
-
-    if kafkaSaslMechanism != "" && kafkaSaslUsername != "" && kafkaSaslPassword != "" {
-        if kafkaSecurityProtocol != "sasl_ssl" && kafkaSecurityProtocol != "sasl_plaintext" {
-            logrus.Fatal("invalid config: kafka security protocol is not sasl based but sasl config is provided")
-        }
-
-        kafkaConfig["security.protocol"] = kafkaSecurityProtocol
-        kafkaConfig["sasl.mechanism"] = kafkaSaslMechanism
-        kafkaConfig["sasl.username"] = kafkaSaslUsername
-        kafkaConfig["sasl.password"] = kafkaSaslPassword
-    }
-
-    producer, err := kafka.NewProducer(&kafkaConfig)
+    defer client.Close()
+    producer, err := sarama.NewAsyncProducerFromClient(client)
     if err != nil {
         logrus.WithError(err).Fatal("couldn't create kafka producer")
     }
+    defer producer.AsyncClose()
 
     r := gin.New()
-
     r.Use(logger.SetLogger(), gin.Recovery())
 
     r.GET("/metrics", gin.WrapH(promhttp.Handler()))

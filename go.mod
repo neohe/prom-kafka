@@ -3,7 +3,7 @@ module github.com/neohe/prom-kafka
 go 1.15
 
 require (
-	github.com/confluentinc/confluent-kafka-go v1.6.1
+	github.com/Shopify/sarama v1.19.0
 	github.com/gin-contrib/logger v0.0.2
 	github.com/gin-gonic/gin v1.6.3
 	github.com/gogo/protobuf v1.3.2

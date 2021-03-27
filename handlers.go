@@ -4,7 +4,7 @@ import (
     "io/ioutil"
     "net/http"
 
-    "github.com/confluentinc/confluent-kafka-go/kafka"
+    "github.com/Shopify/sarama"
     "github.com/gin-gonic/gin"
     "github.com/gogo/protobuf/proto"
     "github.com/golang/snappy"
@@ -12,7 +12,7 @@ import (
     "github.com/sirupsen/logrus"
 )
 
-func receiveHandler(producer *kafka.Producer, serializer Serializer) func(c *gin.Context) {
+func receiveHandler(producer sarama.AsyncProducer, serializer Serializer) func(c *gin.Context) {
     return func(c *gin.Context) {
 
         httpRequestsTotal.Add(float64(1))
@@ -45,25 +45,19 @@ func receiveHandler(producer *kafka.Producer, serializer Serializer) func(c *gin
             return
         }
 
-        for topic, metrics := range metricsPerTopic {
-            t := topic
-            part := kafka.TopicPartition{
-                Partition: kafka.PartitionAny,
-                Topic:     &t,
+        go func() {
+            for err := range producer.Errors() {
+                logrus.WithError(err).Error("failed to produce")
             }
-            for _, metric := range metrics {
-                err := producer.Produce(&kafka.Message{
-                    TopicPartition: part,
-                    Value:          metric,
-                }, nil)
+        }()
 
-                if err != nil {
-                    c.AbortWithStatus(http.StatusInternalServerError)
-                    logrus.WithError(err).Error("couldn't produce message in kafka")
-                    return
+        for topic, metrics := range metricsPerTopic {
+            for _, metric := range metrics {
+                producer.Input() <- &sarama.ProducerMessage{
+                    Topic: topic,
+                    Value: sarama.ByteEncoder(metric),
                 }
             }
         }
-
     }
 }
