@@ -16,7 +16,7 @@ func main() {
     config.Producer.Return.Errors = true
     config.Producer.Partitioner = sarama.NewRandomPartitioner
 
-    client, err := sarama.NewClient([]string{"localhost:9092", "localhost:9192", "localhost:9292"}, config)
+    client, err := sarama.NewClient(kafkaBrokerList, config)
     if err != nil {
         logrus.WithError(err).Fatal("couldn't not create kafka client")
     }

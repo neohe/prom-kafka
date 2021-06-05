@@ -9,23 +9,13 @@ import (
 )
 
 var (
-    kafkaBrokerList        = "kafka:9092"
-    kafkaTopic             = "metrics"
-    topicTemplate          *template.Template
-    basicauth              = false
-    basicauthUsername      = ""
-    basicauthPassword      = ""
-    kafkaCompression       = "none"
-    kafkaBatchNumMessages  = "10000"
-    kafkaSslClientCertFile = ""
-    kafkaSslClientKeyFile  = ""
-    kafkaSslClientKeyPass  = ""
-    kafkaSslCACertFile     = ""
-    kafkaSecurityProtocol  = ""
-    kafkaSaslMechanism     = ""
-    kafkaSaslUsername      = ""
-    kafkaSaslPassword      = ""
-    serializer             Serializer
+    kafkaBrokerList   = []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"}
+    kafkaTopic        = "metrics"
+    topicTemplate     *template.Template
+    basicauth         = false
+    basicauthUsername = ""
+    basicauthPassword = ""
+    serializer        Serializer
 )
 
 func init() {
@@ -37,7 +27,7 @@ func init() {
     }
 
     if value := os.Getenv("KAFKA_BROKER_LIST"); value != "" {
-        kafkaBrokerList = value
+        kafkaBrokerList = strings.Split(value, ",")
     }
 
     if value := os.Getenv("KAFKA_TOPIC"); value != "" {
@@ -51,46 +41,6 @@ func init() {
 
     if value := os.Getenv("BASIC_AUTH_PASSWORD"); value != "" {
         basicauthPassword = value
-    }
-
-    if value := os.Getenv("KAFKA_COMPRESSION"); value != "" {
-        kafkaCompression = value
-    }
-
-    if value := os.Getenv("KAFKA_BATCH_NUM_MESSAGES"); value != "" {
-        kafkaBatchNumMessages = value
-    }
-
-    if value := os.Getenv("KAFKA_SSL_CLIENT_CERT_FILE"); value != "" {
-        kafkaSslClientCertFile = value
-    }
-
-    if value := os.Getenv("KAFKA_SSL_CLIENT_KEY_FILE"); value != "" {
-        kafkaSslClientKeyFile = value
-    }
-
-    if value := os.Getenv("KAFKA_SSL_CLIENT_KEY_PASS"); value != "" {
-        kafkaSslClientKeyPass = value
-    }
-
-    if value := os.Getenv("KAFKA_SSL_CA_CERT_FILE"); value != "" {
-        kafkaSslCACertFile = value
-    }
-
-    if value := os.Getenv("KAFKA_SECURITY_PROTOCOL"); value != "" {
-        kafkaSecurityProtocol = strings.ToLower(value)
-    }
-
-    if value := os.Getenv("KAFKA_SASL_MECHANISM"); value != "" {
-        kafkaSaslMechanism = value
-    }
-
-    if value := os.Getenv("KAFKA_SASL_USERNAME"); value != "" {
-        kafkaSaslUsername = value
-    }
-
-    if value := os.Getenv("KAFKA_SASL_PASSWORD"); value != "" {
-        kafkaSaslPassword = value
     }
 
     var err error
